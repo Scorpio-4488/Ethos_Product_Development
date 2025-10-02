@@ -1,8 +1,9 @@
-# resolver.py (Polished Version)
+# resolver.py (Upgraded Version)
 import pandas as pd
 import psycopg2
 import uuid
 from psycopg2.extras import execute_values
+import networkx as nx # <-- ADD THIS IMPORT
 
 # --- Configuration ---
 # Get these from Person A (Data Lead)
@@ -32,59 +33,51 @@ def fetch_unlinked_events():
     print(f"-> Fetched {len(df)} events to process.")
     return df
 
+# In resolver.py
+
 def resolve_entities_by_proximity(df):
     """
-    Finds links between identifiers and merges them into groups.
-    This handles transitive links (A->B, B->C => {A, B, C}).
+    Final, simplified resolver. It uses dynamic time windows and a graph
+    to find all direct and transitive links.
     """
-    print("Step 2: Resolving entities using proximity logic...")
+    print("Step 2: Resolving entities using simplified graph logic...")
     if df is None or df.empty:
         print("-> No data to resolve.")
         return []
 
-    # This list will hold sets of linked identifiers
-    linked_groups = []
-    time_window = pd.Timedelta(minutes=2)
+    # --- Parameters ---
+    LOCATION_TIME_WINDOWS = {
+        'Main_Entrance': pd.Timedelta(seconds=30),
+        'default': pd.Timedelta(minutes=2)
+    }
 
+    # --- Graph Building Pass ---
+    G = nx.Graph()
+    # Add all unique identifiers as nodes in the graph first
+    G.add_nodes_from(df['source_identifier'].unique())
+
+    # One clean pass to find all valid links and add them as edges
     for location, group in df.groupby('location_name'):
-        group = group.sort_values('event_timestamp').reset_index()
+        time_window = LOCATION_TIME_WINDOWS.get(location, LOCATION_TIME_WINDOWS['default'])
+        group = group.sort_values('event_timestamp').reset_index(drop=True)
 
         for i in range(len(group)):
-            event1 = group.iloc[i]
             for j in range(i + 1, len(group)):
-                event2 = group.iloc[j]
+                event1, event2 = group.iloc[i], group.iloc[j]
+                time_diff = event2['event_timestamp'] - event1['event_timestamp']
 
-                if (event2['event_timestamp'] - event1['event_timestamp']) > time_window:
-                    break
+                if time_diff > time_window:
+                    break  # Stop searching once outside the window
                 
                 if event1['event_type'] != event2['event_type']:
-                    id1 = event1['source_identifier']
-                    id2 = event2['source_identifier']
-                    
-                    # --- CRITICAL MERGING LOGIC ---
-                    # Find which groups (if any) these IDs already belong to
-                    group1_idx, group2_idx = -1, -1
-                    for k, grp in enumerate(linked_groups):
-                        if id1 in grp: group1_idx = k
-                        if id2 in grp: group2_idx = k
-                    
-                    if group1_idx != -1 and group2_idx != -1:
-                        # Case 1: Both IDs are in different, existing groups. Merge them.
-                        if group1_idx != group2_idx:
-                            linked_groups[group1_idx].update(linked_groups[group2_idx])
-                            linked_groups.pop(group2_idx)
-                    elif group1_idx != -1:
-                        # Case 2: Only id1 is in a group. Add id2 to it.
-                        linked_groups[group1_idx].add(id2)
-                    elif group2_idx != -1:
-                        # Case 3: Only id2 is in a group. Add id1 to it.
-                        linked_groups[group2_idx].add(id1)
-                    else:
-                        # Case 4: Neither ID is in a group. Create a new one.
-                        linked_groups.append({id1, id2})
+                    # If the rule is met, simply add an edge to the graph
+                    id1, id2 = event1['source_identifier'], event2['source_identifier']
+                    G.add_edge(id1, id2)
 
-    print(f"-> Found {len(linked_groups)} unique entity groups.")
-    return linked_groups
+    # --- Final Step: Find the connected groups ---
+    resolved_groups = list(nx.connected_components(G))
+    print(f"-> Found {len(resolved_groups)} unique entity groups.")
+    return resolved_groups
 
 def create_unified_entities(linked_groups):
     """
