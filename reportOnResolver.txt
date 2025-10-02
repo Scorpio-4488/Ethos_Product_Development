@@ -1,0 +1,61 @@
+Technical Report: An Adaptive, Graph-Based Entity Resolution Engine
+Author: Sagar Sahu
+Date: October 2, 2025
+Module: resolver.py
+
+1. Executive Summary
+This report outlines the design and validation of the core data processing engine for the Campus Security Monitoring System. The primary challenge was to resolve disparate, often anonymous, event records into unified entity profiles. I developed a hybrid, graph-based resolution algorithm that leverages context-aware heuristics to achieve high-precision entity linking. The module successfully transforms raw, siloed data into an interconnected chronological record, forming the foundational layer for all subsequent system functionalities.
+
+2. Design Philosophy & System Architecture
+The design of the resolution module was guided by a core philosophy: prioritize precision over recall. In a security context, a false positive (incorrectly linking two different people) is significantly more detrimental than a false negative (failing to link two related events). This principle informed the architectural choice of a multi-stage, evidence-based approach over a simplistic, permissive one.
+
+The architecture consists of three logical stages:
+
+Data Standardization: Raw event logs are ingested and transformed into a unified schema within a central PostgreSQL database.
+
+Evidence Collection: The resolver.py script systematically scans the standardized data to identify potential links between identifiers based on spatiotemporal correlation.
+
+Entity Synthesis: A graph data structure is used to synthesize the collected evidence, merging identifiers into coherent entities based on the strength and transitivity of their connections.
+
+3. Algorithmic Methodology: From Heuristic to Hybrid Engine
+3.1. Baseline Heuristic: Fixed-Window Proximity
+A baseline model was first established using a fixed two-minute proximity window. While this approach provided a functional proof-of-concept, its core deficiency was its inability to adapt to varying environmental contexts. A fixed window is insufficiently strict for high-traffic zones (e.g., Main Entrance), leading to a high probability of erroneous entity fusions. This model was therefore deemed inadequate for a production-level security application.
+
+3.2. Core Innovation: The Graph-Based Resolution Engine
+The final, implemented engine is a significant evolution of the baseline model. It addresses the weaknesses of the heuristic approach through two primary innovations:
+
+1. Context-Aware Spatiotemporal Correlation:
+To improve the quality of evidence, the fixed time window was replaced with a dynamic, location-aware correlation model. This model applies distinct temporal thresholds based on the known operational characteristics of a given location, drastically reducing false positives.
+
+Example Heuristics Implemented:
+
+Main_Entrance: A stringent 30-second correlation window to match the high-throughput nature of the area.
+
+default: A more lenient 2-minute window serves as a fallback for all other campus locations.
+
+2. Transitive Closure via Graph Traversal:
+The engine's most powerful feature is its use of a graph data structure (networkx) to manage and resolve entity relationships.
+
+Graph Construction: All unique identifiers are initialized as nodes. An "edge" is created between two nodes if their corresponding events satisfy the context-aware spatiotemporal correlation criteria.
+
+Entity Resolution: After the graph is fully constructed, the problem of entity resolution becomes trivial. A single graph traversal to find all "connected components" yields the final, resolved entity groups. This method is mathematically robust and elegantly handles the complex challenge of transitive linking (e.g., if A is linked to B, and B to C, the set {A, B, C} is resolved as a single entity automatically).
+
+4. Algorithmic Validation & Integrity Check
+The integrity of the resolution engine was validated via a dedicated test script (test_resolver.py) that operates independently of the main database. A curated, in-memory dataset was crafted to simulate specific edge cases and confirm the algorithm's correctness.
+
+The test suite successfully verified that the final algorithm:
+
+Correctly applies dynamic time windows, accepting valid links in high-traffic zones while rejecting those that fall outside the strict temporal bounds.
+
+Achieves transitive closure, correctly merging a multi-hop chain of links into a single entity.
+
+Maintains high precision by correctly excluding events that do not meet the required correlation criteria.
+
+The successful completion of this test suite provided high confidence in the algorithm's logical soundness and its readiness for deployment on the full campus dataset.
+
+5. Future Work & Scalability
+While the current engine is robust, future iterations could incorporate additional layers of intelligence:
+
+NLP-based Linking: Integrate Natural Language Processing to extract entity information from free-text fields (e.g., helpdesk notes).
+
+Weighted Edges: Evolve the graph model to use weighted edges, where the weight is a confidence score derived from machine learning models, allowing for probabilistic entity resolution.
