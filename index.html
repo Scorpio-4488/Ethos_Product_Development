@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Info Page</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        @media (max-width: 700px) {
+            .container {
+                width: 98%;
+                padding: 8px;
+            }
+
+            .results-section,
+            .alerts-panel,
+            .status-message {
+                max-width: 100%;
+                padding: 12px;
+            }
+
+            .results-section table,
+            .results-section th,
+            .results-section td {
+                font-size: 0.95em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h3>Welcome to Information Page</h3>
+        <p>This page provides various details about the searched person.</p>
+
+        <form action="index.php" method="post">
+            <input type="text" name="search_query" placeholder="Enter Student ID, Face ID" class="ellipsis">
+            <select name="entity_type">
+                <option value="Student">Student</option>
+                <option value="Staff">Staff</option>
+                <option value="Faculty">Faculty</option>
+            </select>
+            <select name="time_window" id="time_window">
+                <option value="today">Today</option>
+                <option value="last_24h">Last 24 Hours</option>
+                <option value="custom">Custom Date</option>
+            </select>
+            <input type="date" name="custom_date" id="custom_date" style="display:none;">
+            <button type="submit">Get History</button>
+            <button type="reset" class="reset-btn">Reset</button>
+        </form>
+
+        <!-- Alerts Panel for Searched Student -->
+        <div class="alerts-panel">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <div class="alert-title">Student Offline Alert</div>
+                <div class="alert-name">Name: <span>John Doe</span></div>
+                <div class="alert-last-seen">Last seen: 2025-10-02 20:15</div>
+            </div>
+        </div>
+        <!-- Status/Message Section -->
+        <div class="status-message">
+            Please enter a search query to see results.
+        </div>
+
+        <!-- Results Section (static UI for now) -->
+        <div class="results-section">
+            <h4>Search Results</h4>
+            <!-- Image Panel for Search Result -->
+            <div class="image-panel">
+                <img src="prepare-03.png" alt="Person Photo" class="result-image">
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Timestamp</th>
+                        <th>Location</th>
+                        <th>Source Identifier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>💳 Card Swipe</td>
+                        <td>2025-10-03 09:15</td>
+                        <td>Main Gate</td>
+                        <td>C3286</td>
+                    </tr>
+                    <tr>
+                        <td>📡 WiFi Log</td>
+                        <td>2025-10-03 10:00</td>
+                        <td>Library</td>
+                        <td>WIFI-123</td>
+                    </tr>
+                    <tr>
+                        <td>👤 Face Scan</td>
+                        <td>2025-10-03 11:30</td>
+                        <td>Cafeteria</td>
+                        <td>FS-001</td>
+                    </tr>
+                </tbody>
+            </table>
+            <!-- Predict Button (after table) -->
+            <div class="predict-btn-panel">
+                <button class="predict-btn">Predict</button>
+            </div>
+        </div>
+    </div>
+    <script src="index.js"></script>
+</body>
+
+</html>
